@@ -8,6 +8,9 @@ import numpy as np
 import argparse
 import imutils
 import cv2
+import RPi.GPIO as GPIO
+import time
+
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -16,6 +19,13 @@ ap.add_argument("-v", "--video",
 ap.add_argument("-b", "--buffer", type=int, default=64,
                 help="max buffer size")
 args = vars(ap.parse_args())
+
+#LED setup
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(18,GPIO.OUT)
+GPIO.setup(23,GPIO.OUT)
+
 
 # define the lower and upper boundaries of the "green"
 # ball in the HSV color space, then initialize the
@@ -45,7 +55,8 @@ while True:
 
     # resize the frame, blur it, and convert it to the HSV
     # color space
-    frame = imutils.resize(frame, width=320)
+    width = 200
+    frame = imutils.resize(frame, width)
     # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -71,6 +82,13 @@ while True:
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         M = cv2.moments(c)
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        
+        if (center[0] <= width/2):
+            GPIO.output(18,GPIO.HIGH)
+            GPIO.output(23,GPIO.LOW)
+        else:
+            GPIO.output(18,GPIO.LOW)
+            GPIO.output(23,GPIO.HIGH)
 
         # only proceed if the radius meets a minimum size
         if radius > 10:
@@ -81,7 +99,11 @@ while True:
             cv2.circle(frame, (int(x), int(y)), int(radius),
                        (0, 255, 255), 2)
             cv2.circle(frame, center, 5, (0, 0, 255), -1)
+    else:
+        GPIO.output(18,GPIO.LOW)
+        GPIO.output(23,GPIO.LOW)
 
+        
     # update the points queue
     pts.appendleft(center)
 
