@@ -25,6 +25,8 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 GPIO.setup(18,GPIO.OUT)
 GPIO.setup(23,GPIO.OUT)
+GPIO.setup(24,GPIO.OUT)
+
 
 
 # define the lower and upper boundaries of the "green"
@@ -37,7 +39,8 @@ pts = deque(maxlen=args["buffer"])
 # if a video path was not supplied, grab the reference
 # to the webcam
 if not args.get("video", False):
-    camera = cv2.VideoCapture(0)
+    camera = cv2.VideoCapture(0)   # Capture Video...
+    print("Camera warming up ...")
 
 # otherwise, grab a reference to the video file
 else:
@@ -82,13 +85,24 @@ while True:
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         M = cv2.moments(c)
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        leftBound = width/2 - 10
+        rightBound = width/2 +10
         
-        if (center[0] <= width/2):
+        if (center[0] >= leftBound and center[0] <= rightBound):
+            GPIO.output(24, GPIO.HIGH)
+            GPIO.output(18,GPIO.LOW)
+            GPIO.output(23,GPIO.LOW)
+            
+        elif (center[0] < leftBound):
             GPIO.output(18,GPIO.HIGH)
             GPIO.output(23,GPIO.LOW)
+            GPIO.output(24,GPIO.LOW)
+            
         else:
             GPIO.output(18,GPIO.LOW)
             GPIO.output(23,GPIO.HIGH)
+            GPIO.output(24,GPIO.LOW)
+
 
         # only proceed if the radius meets a minimum size
         if radius > 10:
@@ -99,9 +113,18 @@ while True:
             cv2.circle(frame, (int(x), int(y)), int(radius),
                        (0, 255, 255), 2)
             cv2.circle(frame, center, 5, (0, 0, 255), -1)
+
+        if radius >= 50:
+            #merry xmas!
+            print ('merry xmas!')
+            GPIO.output(18,GPIO.HIGH)
+            GPIO.output(23,GPIO.HIGH)
+            GPIO.output(24,GPIO.HIGH)
     else:
         GPIO.output(18,GPIO.LOW)
         GPIO.output(23,GPIO.LOW)
+        GPIO.output(24,GPIO.LOW)
+
 
         
     # update the points queue
