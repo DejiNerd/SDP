@@ -15,14 +15,14 @@
     <SUITE FILE_PATH="coverage/ball_tracking$a_star.coverage" NAME="a_star Coverage Results" MODIFIED="1509951441670" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../../../COMPSCI 383/AI/8_piece_puzzle" />
   </component>
   <component name="FileEditorManager">
-    <leaf>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file leaf-file-name="ball_tracking.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/ball_tracking.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="192">
-              <caret line="41" column="26" lean-forward="false" selection-start-line="41" selection-start-column="26" selection-end-line="41" selection-end-column="26" />
+            <state relative-caret-position="416">
+              <caret line="126" column="0" lean-forward="true" selection-start-line="126" selection-start-column="0" selection-end-line="126" selection-end-column="0" />
               <folding>
-                <element signature="e#127#156#0" expanded="true" />
+                <element signature="e#120#149#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -250,7 +250,17 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="e#127#156#0" expanded="true" />
+            <element signature="e#120#149#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ball_tracking.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="e#120#149#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -285,10 +295,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/ball_tracking.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="192">
-          <caret line="41" column="26" lean-forward="false" selection-start-line="41" selection-start-column="26" selection-end-line="41" selection-end-column="26" />
+        <state relative-caret-position="416">
+          <caret line="126" column="0" lean-forward="true" selection-start-line="126" selection-start-column="0" selection-end-line="126" selection-end-column="0" />
           <folding>
-            <element signature="e#127#156#0" expanded="true" />
+            <element signature="e#120#149#0" expanded="true" />
           </folding>
         </state>
       </provider>

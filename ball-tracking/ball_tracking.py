@@ -1,8 +1,8 @@
+# Created by BallBot SDP
 # USAGE
 # python ball_tracking.py --video ball_tracking_example.mp4
 # python ball_tracking.py
 
-# import the necessary packages
 from collections import deque
 import numpy as np
 import argparse
@@ -10,7 +10,6 @@ import imutils
 import cv2
 import RPi.GPIO as GPIO
 import time
-
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -20,14 +19,12 @@ ap.add_argument("-b", "--buffer", type=int, default=64,
                 help="max buffer size")
 args = vars(ap.parse_args())
 
-#LED setup
+# LED setup
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-GPIO.setup(18,GPIO.OUT)
-GPIO.setup(23,GPIO.OUT)
-GPIO.setup(24,GPIO.OUT)
-
-
+GPIO.setup(18, GPIO.OUT)
+GPIO.setup(23, GPIO.OUT)
+GPIO.setup(24, GPIO.OUT)
 
 # define the lower and upper boundaries of the "green"
 # ball in the HSV color space, then initialize the
@@ -36,17 +33,15 @@ greenLower = (29, 86, 6)
 greenUpper = (64, 255, 255)
 pts = deque(maxlen=args["buffer"])
 
-# if a video path was not supplied, grab the reference
-# to the webcam
+# if a video path was not supplied, grab the reference to the webcam
 if not args.get("video", False):
-    camera = cv2.VideoCapture(0)   # Capture Video...
+    camera = cv2.VideoCapture(0)  # Capture Video...
     print("Camera warming up ...")
 
-# otherwise, grab a reference to the video file
+# otherwise, get video file
 else:
     camera = cv2.VideoCapture(args["video"])
 
-# keep looping
 while True:
     # grab the current frame
     (grabbed, frame) = camera.read()
@@ -56,12 +51,13 @@ while True:
     if args.get("video") and not grabbed:
         break
 
-    # resize the frame, blur it, and convert it to the HSV
-    # color space
+    # resize the frame, and convert it to the HSV color space
     width = 200
     frame = imutils.resize(frame, width)
+    cv2.imshow("before", frame)
     # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    cv2.imshow("HSV", hsv)
 
     # construct a mask for the color "green", then perform
     # a series of dilations and erosions to remove any small
@@ -69,6 +65,7 @@ while True:
     mask = cv2.inRange(hsv, greenLower, greenUpper)
     mask = cv2.erode(mask, None, iterations=2)
     mask = cv2.dilate(mask, None, iterations=2)
+    cv2.imshow("mask", mask)
 
     # find contours in the mask and initialize the current
     # (x, y) center of the ball
@@ -79,67 +76,63 @@ while True:
     # only proceed if at least one contour was found
     if len(cnts) > 0:
         # find the largest contour in the mask, then use
-        # it to compute the minimum enclosing circle and
-        # centroid
+        # it to compute the minimum enclosing circle and centroid
         c = max(cnts, key=cv2.contourArea)
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         M = cv2.moments(c)
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-        leftBound = width/2 - 10
-        rightBound = width/2 +10
-        
+        leftBound = (width / 2) - 10
+        rightBound = (width / 2) + 10
+
         if (center[0] >= leftBound and center[0] <= rightBound):
             GPIO.output(24, GPIO.HIGH)
-            GPIO.output(18,GPIO.LOW)
-            GPIO.output(23,GPIO.LOW)
-            
+            GPIO.output(18, GPIO.LOW)
+            GPIO.output(23, GPIO.LOW)
+
         elif (center[0] < leftBound):
-            GPIO.output(18,GPIO.HIGH)
-            GPIO.output(23,GPIO.LOW)
-            GPIO.output(24,GPIO.LOW)
-            
+            GPIO.output(18, GPIO.HIGH)
+            GPIO.output(23, GPIO.LOW)
+            GPIO.output(24, GPIO.LOW)
+
         else:
-            GPIO.output(18,GPIO.LOW)
-            GPIO.output(23,GPIO.HIGH)
-            GPIO.output(24,GPIO.LOW)
+            GPIO.output(18, GPIO.LOW)
+            GPIO.output(23, GPIO.HIGH)
+            GPIO.output(24, GPIO.LOW)
 
+        print('center: ', center, 'radius', int(radius))  # outputs coordinate to command line
+        # cv2.circle(image, center, radius, color, thickness)
+        cv2.circle(frame, center, 5, (0, 0, 255), -1)
 
-        # only proceed if the radius meets a minimum size
+        # draw outer circle  if the radius meets a minimum size
         if radius > 10:
             # draw the circle and centroid on the frame,
             # then update the list of tracked points
-            print('center: ',(int(x),int(y)), 'radius', int(radius))
-            print('center2: ',center, 'radius2', int(radius))
+            # cv2.circle(image, center, radius, color, thickness)
             cv2.circle(frame, (int(x), int(y)), int(radius),
                        (0, 255, 255), 2)
-            cv2.circle(frame, center, 5, (0, 0, 255), -1)
 
         if radius >= 50:
-            #merry xmas!
-            print ('merry xmas!')
-            GPIO.output(18,GPIO.HIGH)
-            GPIO.output(23,GPIO.HIGH)
-            GPIO.output(24,GPIO.HIGH)
+            # merry xmas!
+            print('merry xmas!')
+            GPIO.output(18, GPIO.HIGH)
+            GPIO.output(23, GPIO.HIGH)
+            GPIO.output(24, GPIO.HIGH)
     else:
-        GPIO.output(18,GPIO.LOW)
-        GPIO.output(23,GPIO.LOW)
-        GPIO.output(24,GPIO.LOW)
+        GPIO.output(18, GPIO.LOW)
+        GPIO.output(23, GPIO.LOW)
+        GPIO.output(24, GPIO.LOW)
 
-
-        
     # update the points queue
     pts.appendleft(center)
 
     # loop over the set of tracked points
     for i in xrange(1, len(pts)):
-        # if either of the tracked points are None, ignore
-        # them
+        # if either of the tracked points are None, ignore them
         if pts[i - 1] is None or pts[i] is None:
             continue
-
-        # otherwise, compute the thickness of the line and
-        # draw the connecting lines
+        # otherwise, compute the thickness of the line anddraw the connecting lines
         thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
+        # cv.Line(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)
         cv2.line(frame, pts[i - 1], pts[i], (0, 0, 255), thickness)
 
     # show the frame to our screen
