@@ -26,6 +26,12 @@ GPIO.setup(18, GPIO.OUT)
 GPIO.setup(23, GPIO.OUT)
 GPIO.setup(24, GPIO.OUT)
 
+#bryce motors
+GPIO.setup(2, GPIO.OUT)
+# GPIO.setup(3, GPIO.OUT)
+# GPIO.setup(4, GPIO.OUT)
+
+
 # define the lower and upper boundaries of the "green"
 # ball in the HSV color space, then initialize the
 # list of tracked points
@@ -41,7 +47,8 @@ if not args.get("video", False):
 # otherwise, get video file
 else:
     camera = cv2.VideoCapture(args["video"])
-
+    
+GPIO.setup(2, GPIO.LOW)
 while True:
     # grab the current frame
     (grabbed, frame) = camera.read()
@@ -81,23 +88,30 @@ while True:
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         M = cv2.moments(c)
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-        leftBound = (width / 2) - 10
-        rightBound = (width / 2) + 10
+        leftBound = (width / 2) - 30
+        rightBound = (width / 2) + 30
 
         if (center[0] >= leftBound and center[0] <= rightBound):
             GPIO.output(24, GPIO.HIGH)
             GPIO.output(18, GPIO.LOW)
             GPIO.output(23, GPIO.LOW)
+            # GPIO.setup(3, GPIO.LOW)
+            GPIO.setup(2, GPIO.LOW)
 
         elif (center[0] < leftBound):
             GPIO.output(18, GPIO.HIGH)
             GPIO.output(23, GPIO.LOW)
             GPIO.output(24, GPIO.LOW)
+            # GPIO.setup(3, GPIO.HIGH)
+            GPIO.setup(2, GPIO.HIGH)
+
 
         else:
             GPIO.output(18, GPIO.LOW)
             GPIO.output(23, GPIO.HIGH)
             GPIO.output(24, GPIO.LOW)
+            # GPIO.setup(3, GPIO.LOW)
+            GPIO.setup(2, GPIO.HIGH)
 
         print('center: ', center, 'radius', int(radius))  # outputs coordinate to command line
         # cv2.circle(image, center, radius, color, thickness)
