@@ -1,20 +1,17 @@
-# Created by BallBot SDP
-# USAGE
-# python ball_tracking.py --video ball_tracking_example.mp4
-# python ball_tracking.py
+# Created by BallBot SDP, using the Open Source Computer Vision Library
+# USAGE: python ball_tracking.py
 
 from collections import deque
-import numpy as np
-import argparse
-import imutils
 import cv2
 import RPi.GPIO as GPIO
 import time
+import numpy as np
+import imutils
+import argparse
 
-# construct the argument parse and parse the arguments
+
+
 ap = argparse.ArgumentParser()
-ap.add_argument("-v", "--video",
-                help="path to the (optional) video file")
 ap.add_argument("-b", "--buffer", type=int, default=64,
                 help="max buffer size")
 args = vars(ap.parse_args())
@@ -25,18 +22,13 @@ GPIO.setwarnings(False)
 GPIO.setup(18, GPIO.OUT)
 GPIO.setup(23, GPIO.OUT)
 GPIO.setup(24, GPIO.OUT)
-
-#bryce motors
-GPIO.setup(2, GPIO.OUT)
-# GPIO.setup(3, GPIO.OUT)
-# GPIO.setup(4, GPIO.OUT)
+GPIO.setup(2, GPIO.OUT)  #Bryce motors
 
 
-# define the lower and upper boundaries of the "green"
-# ball in the HSV color space, then initialize the
-# list of tracked points
-greenLower = (29, 86, 6)
-greenUpper = (64, 255, 255)
+# define the lower and upper boundaries of the tennis ball color
+# ball in the HSV color space, then initialize the list of tracked points
+lowerColorBound = (29, 86, 6)
+upperColorBound = (64, 255, 255)
 pts = deque(maxlen=args["buffer"])
 
 # if a video path was not supplied, grab the reference to the webcam
@@ -44,18 +36,15 @@ if not args.get("video", False):
     camera = cv2.VideoCapture(0)  # Capture Video...
     print("Camera warming up ...")
 
-# otherwise, get video file
-else:
-    camera = cv2.VideoCapture(args["video"])
     
 GPIO.setup(2, GPIO.LOW)
 while True:
     # grab the current frame
-    (grabbed, frame) = camera.read()
+    (captured, frame) = camera.read()
 
-    # if we are viewing a video and we did not grab a frame,
+    # if we are viewing a video and we did not capture a frame,
     # then we have reached the end of the video
-    if args.get("video") and not grabbed:
+    if args.get("video") and not captured:
         break
 
     # resize the frame, and convert it to the HSV color space
@@ -69,7 +58,7 @@ while True:
     # construct a mask for the color "green", then perform
     # a series of dilations and erosions to remove any small
     # blobs left in the mask
-    mask = cv2.inRange(hsv, greenLower, greenUpper)
+    mask = cv2.inRange(hsv, lowerColorBound, upperColorBound)
     mask = cv2.erode(mask, None, iterations=2)
     mask = cv2.dilate(mask, None, iterations=2)
     cv2.imshow("mask", mask)
@@ -95,14 +84,12 @@ while True:
             GPIO.output(24, GPIO.HIGH)
             GPIO.output(18, GPIO.LOW)
             GPIO.output(23, GPIO.LOW)
-            # GPIO.setup(3, GPIO.LOW)
             GPIO.setup(2, GPIO.LOW)
 
         elif (center[0] < leftBound):
             GPIO.output(18, GPIO.HIGH)
             GPIO.output(23, GPIO.LOW)
             GPIO.output(24, GPIO.LOW)
-            # GPIO.setup(3, GPIO.HIGH)
             GPIO.setup(2, GPIO.HIGH)
 
 
@@ -110,12 +97,11 @@ while True:
             GPIO.output(18, GPIO.LOW)
             GPIO.output(23, GPIO.HIGH)
             GPIO.output(24, GPIO.LOW)
-            # GPIO.setup(3, GPIO.LOW)
             GPIO.setup(2, GPIO.HIGH)
 
         print('center: ', center, 'radius', int(radius))  # outputs coordinate to command line
         # cv2.circle(image, center, radius, color, thickness)
-        cv2.circle(frame, center, 5, (0, 0, 255), -1)
+        cv2.circle(frame, center, 5, (255, 0, 0), -1)
 
         # draw outer circle  if the radius meets a minimum size
         if radius > 10:
@@ -123,10 +109,10 @@ while True:
             # then update the list of tracked points
             # cv2.circle(image, center, radius, color, thickness)
             cv2.circle(frame, (int(x), int(y)), int(radius),
-                       (0, 255, 255), 2)
+                       (0, 0, 255), 2)
 
         if radius >= 50:
-            # merry xmas!
+            # ball is close enough to be retrieved!
             print('merry xmas!')
             GPIO.output(18, GPIO.HIGH)
             GPIO.output(23, GPIO.HIGH)
@@ -147,7 +133,7 @@ while True:
         # otherwise, compute the thickness of the line anddraw the connecting lines
         thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
         # cv.Line(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)
-        cv2.line(frame, pts[i - 1], pts[i], (0, 0, 255), thickness)
+        cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
 
     # show the frame to our screen
     cv2.imshow("Frame", frame)
@@ -159,4 +145,8 @@ while True:
 
 # cleanup the camera and close any open windows
 camera.release()
+GPIO.output(18, GPIO.LOW)
+GPIO.output(23, GPIO.LOW)
+GPIO.output(24, GPIO.LOW)
+GPIO.setup(2, GPIO.LOW)
 cv2.destroyAllWindows()
