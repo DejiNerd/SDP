@@ -1,6 +1,6 @@
 # Created by BallBot SDP, using the Open Source Computer Vision Library
 # USAGE: python ball_tracking.py
-# (source ~./profile; workon cv; python ~/SDP/code/ball-tracking.py)&
+# (source ~/.profile; workon cv; python /home/pi/SDP/ball-tracking/ball-tracking.py)&
 
 from collections import deque
 import cv2
@@ -94,7 +94,7 @@ while True:
     # resize the frame, and convert it to the HSV color space
     width = 200
     frame = imutils.resize(frame, width)
-    cv2.imshow("before", frame)
+    # cv2.imshow("before", frame)
     # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     # cv2.imshow("HSV", hsv)
@@ -167,7 +167,7 @@ while True:
         cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
 
     # show the frame to our screen
-    cv2.imshow("Frame", frame)
+    # cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
 
     # if the 'q' key is pressed, stop the loop
