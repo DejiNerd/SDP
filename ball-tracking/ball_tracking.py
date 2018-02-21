@@ -1,20 +1,19 @@
 # Created by BallBot SDP, using the Open Source Computer Vision Library
 # USAGE: python ball_tracking.py
+# (source ~./profile; workon cv; python ~/SDP/code/ball-tracking.py)&
 
 from collections import deque
 import cv2
 import RPi.GPIO as GPIO
-import time
 import numpy as np
 import imutils
 import argparse
-
-
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-b", "--buffer", type=int, default=64,
                 help="max buffer size")
 args = vars(ap.parse_args())
+
 
 def setup():
     # LED setup
@@ -23,14 +22,15 @@ def setup():
     GPIO.setup(18, GPIO.OUT)
     GPIO.setup(23, GPIO.OUT)
     GPIO.setup(24, GPIO.OUT)
-    #Bryce motors
-    GPIO.setup(2, GPIO.OUT)
-    
+    GPIO.setup(2, GPIO.OUT)  # Bryce motors
+
+
 def goForward():
     GPIO.output(24, GPIO.HIGH)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.setup(2, GPIO.LOW)
+
 
 def goLeft():
     GPIO.output(18, GPIO.LOW)
@@ -38,21 +38,25 @@ def goLeft():
     GPIO.output(24, GPIO.LOW)
     GPIO.setup(2, GPIO.HIGH)
 
+
 def goRight():
     GPIO.output(18, GPIO.HIGH)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
     GPIO.setup(2, GPIO.HIGH)
 
+
 def moveForwardABit():
     GPIO.output(18, GPIO.HIGH)
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.HIGH)
 
+
 def roomba():
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
+
 
 def shutdown():
     # cleanup the camera and close any open windows
@@ -62,8 +66,8 @@ def shutdown():
     GPIO.output(24, GPIO.LOW)
     GPIO.setup(2, GPIO.LOW)
     cv2.destroyAllWindows()
-    
-    
+
+
 setup()
 
 # define the lower and upper boundaries of the tennis ball color
@@ -72,12 +76,10 @@ lowerColorBound = (29, 86, 6)
 upperColorBound = (64, 255, 255)
 pts = deque(maxlen=args["buffer"])
 
-
 # grab the reference to the webcam
 camera = cv2.VideoCapture(0)  # Capture Video...
 print("Camera warming up ...")
 
-    
 GPIO.setup(2, GPIO.LOW)
 ballCount = 0
 while True:
@@ -95,7 +97,7 @@ while True:
     cv2.imshow("before", frame)
     # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    #cv2.imshow("HSV", hsv)
+    # cv2.imshow("HSV", hsv)
 
     # construct a mask for the color "green", then perform
     # a series of dilations and erosions to remove any small
@@ -103,7 +105,7 @@ while True:
     mask = cv2.inRange(hsv, lowerColorBound, upperColorBound)
     mask = cv2.erode(mask, None, iterations=2)
     mask = cv2.dilate(mask, None, iterations=2)
-    #cv2.imshow("mask", mask)
+    # cv2.imshow("mask", mask)
 
     # find contours in the mask and initialize the current
     # (x, y) center of the ball
@@ -145,7 +147,7 @@ while True:
 
         if radius >= 50:
             # ball is close enough to be retrieved!
-            ballCount = ballCount + 1 #look into this!
+            ballCount = ballCount + 1  # look into this!
             print('Ball Retrieved ' + str(ballCount))
             moveForwardABit()
     else:
