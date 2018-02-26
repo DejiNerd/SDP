@@ -8,6 +8,7 @@ import RPi.GPIO as GPIO
 import numpy as np
 import imutils
 import argparse
+import time
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-b", "--buffer", type=int, default=64,
@@ -22,40 +23,43 @@ def setup():
     GPIO.setup(18, GPIO.OUT)
     GPIO.setup(23, GPIO.OUT)
     GPIO.setup(24, GPIO.OUT)
-    GPIO.setup(2, GPIO.OUT)  # Bryce motors
-
+    GPIO.setup(27, GPIO.OUT)  # Bryce motors
+#18 = white, 23 = green, 24 = blue
 
 def goForward():
-    GPIO.output(24, GPIO.HIGH)
     GPIO.output(18, GPIO.LOW)
-    GPIO.output(23, GPIO.LOW)
-    GPIO.setup(2, GPIO.LOW)
+    GPIO.output(23, GPIO.HIGH)
+    GPIO.output(24, GPIO.LOW)
+    GPIO.output(27, GPIO.HIGH)
 
 
 def goLeft():
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
-    GPIO.setup(2, GPIO.HIGH)
+    GPIO.output(27, GPIO.LOW)
 
 
 def goRight():
-    GPIO.output(18, GPIO.HIGH)
+    GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
-    GPIO.setup(2, GPIO.HIGH)
+    GPIO.output(27, GPIO.HIGH)
 
-
-def moveForwardABit():
-    GPIO.output(18, GPIO.HIGH)
+#TODO
+def moveForwardABit(tf):
+    GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
-    GPIO.output(24, GPIO.HIGH)
+    GPIO.output(24, GPIO.LOW)
+    GPIO.output(27, GPIO.HIGH)
+    #time.sleep(tf)
 
-
+#TODO
 def roomba():
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
+    GPIO.output(27, GPIO.LOW)
 
 
 def shutdown():
@@ -80,7 +84,7 @@ pts = deque(maxlen=args["buffer"])
 camera = cv2.VideoCapture(0)  # Capture Video...
 print("Camera warming up ...")
 
-GPIO.setup(2, GPIO.LOW)
+GPIO.setup(27, GPIO.LOW)
 ballCount = 0
 while True:
     # grab the current frame
@@ -97,7 +101,7 @@ while True:
     # cv2.imshow("before", frame)
     # blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # cv2.imshow("HSV", hsv)
+    cv2.imshow("HSV", hsv)
 
     # construct a mask for the color "green", then perform
     # a series of dilations and erosions to remove any small
@@ -105,7 +109,7 @@ while True:
     mask = cv2.inRange(hsv, lowerColorBound, upperColorBound)
     mask = cv2.erode(mask, None, iterations=2)
     mask = cv2.dilate(mask, None, iterations=2)
-    # cv2.imshow("mask", mask)
+    cv2.imshow("mask", mask)
 
     # find contours in the mask and initialize the current
     # (x, y) center of the ball
@@ -128,10 +132,10 @@ while True:
             goForward()
 
         elif (center[0] < leftBound):
-            goRight()
+            goLeft()
 
         else:
-            goLeft()
+            goRight()
 
         # print('center: ', center, 'radius', int(radius))  # outputs coordinate to command line
         # cv2.circle(image, center, radius, color, thickness)
@@ -167,7 +171,7 @@ while True:
         cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
 
     # show the frame to our screen
-    # cv2.imshow("Frame", frame)
+    cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
 
     # if the 'q' key is pressed, stop the loop
