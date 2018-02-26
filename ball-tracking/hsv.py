@@ -3,6 +3,8 @@ import numpy as np
 
 
 cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+cap.set(cv2.CAP_PROP_EXPOSURE, 0)
 
 def nothing(x):
     pass
