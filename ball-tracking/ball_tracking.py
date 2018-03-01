@@ -24,7 +24,8 @@ def setup():
     GPIO.setup(23, GPIO.OUT)
     GPIO.setup(24, GPIO.OUT)
     GPIO.setup(27, GPIO.OUT)  # Bryce motors
-#18 = white, 23 = green, 24 = blue
+    # 18 = white, 23 = green, 24 = blue
+
 
 def goForward():
     GPIO.output(18, GPIO.LOW)
@@ -46,15 +47,17 @@ def goRight():
     GPIO.output(24, GPIO.LOW)
     GPIO.output(27, GPIO.HIGH)
 
-#TODO
+
+# TODO
 def moveForwardABit(tf):
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
     GPIO.output(27, GPIO.HIGH)
-    #time.sleep(tf)
+    # time.sleep(tf)
 
-#TODO
+
+# TODO
 def roomba():
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
@@ -68,7 +71,7 @@ def shutdown():
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
-    GPIO.setup(2, GPIO.LOW) # 2 or 27 ?
+    GPIO.setup(2, GPIO.LOW)  # 2 or 27 ?
     cv2.destroyAllWindows()
 
 
@@ -77,7 +80,7 @@ setup()
 # define the lower and upper boundaries of the tennis ball color
 # ball in the HSV color space, then initialize the list of tracked points
 lowerColorBound = (29, 24, 6)
-upperColorBound = (72, 255, 255)   # new camera improvements
+upperColorBound = (72, 255, 255)  # new camera improvements
 # lowerColorBound = (29, 86, 6)
 # upperColorBound = (64, 255, 255)
 pts = deque(maxlen=args["buffer"])
@@ -89,7 +92,6 @@ print("Camera warming up ...")
 GPIO.setup(27, GPIO.LOW)
 ballCount = 0
 while True:
-    # grab the current frame
     (captured, frame) = camera.read()
 
     # if no frame 
@@ -97,7 +99,7 @@ while True:
         break
 
     # resize the frame, and convert it to the HSV color space
-    width = 200     # 640 might be reasonable
+    width = 200  # 640 might be reasonable
     frame = imutils.resize(frame, width)
     cv2.GaussianBlur()
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
@@ -110,7 +112,6 @@ while True:
     mask = cv2.inRange(hsv, lowerColorBound, upperColorBound)
     mask = cv2.erode(mask, None, iterations=10)
     mask = cv2.dilate(mask, None, iterations=10)
-    # cv2.imshow("mask", mask)
 
     # find contours in the mask and initialize the current
     # (x, y) center of the ball
@@ -126,6 +127,8 @@ while True:
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         M = cv2.moments(c)
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        cv2.circle(frame, center, 5, (255, 0, 0), -1)
+        # print('center: ', center, 'radius', int(radius))  # outputs coordinate to command line
         leftBound = (width / 2) - (0.15 * width)
         rightBound = (width / 2) + (0.15 * width)
 
@@ -138,20 +141,15 @@ while True:
         else:
             goRight()
 
-        # print('center: ', center, 'radius', int(radius))  # outputs coordinate to command line
-        # cv2.circle(image, center, radius, color, thickness)
-        cv2.circle(frame, center, 5, (255, 0, 0), -1)
-
-        # draw outer circle  if the radius meets a minimum size
+        # draw outer circle if the radius meets a minimum size
         if radius > 10:
-            # draw the circle and centroid on the frame,
-            # then update the list of tracked points
             # cv2.circle(image, center, radius, color, thickness)
             cv2.circle(frame, (int(x), int(y)), int(radius),
                        (0, 0, 255), 2)
 
         if radius >= 50:
             # ball is close enough to be retrieved!
+            # TODO
             # ballCount = ballCount + 1  # look into this!
             # print('Ball Retrieved ' + str(ballCount))
             moveForwardABit()
@@ -166,7 +164,7 @@ while True:
         # if either of the tracked points are None, ignore them
         if pts[i - 1] is None or pts[i] is None:
             continue
-        # otherwise, compute the thickness of the line anddraw the connecting lines
+        # otherwise, compute the thickness of the line and draw the connecting lines
         thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
         # cv.Line(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)
         cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
