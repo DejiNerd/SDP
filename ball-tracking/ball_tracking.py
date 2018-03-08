@@ -14,7 +14,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-b", "--buffer", type=int, default=64,
                 help="max buffer size")
 args = vars(ap.parse_args())
-
+ntime = 0
 
 def setup():
     # LED setup
@@ -32,6 +32,7 @@ def goForward():
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
     GPIO.output(27, GPIO.HIGH)
+    #print ("forward")
 
 
 def goLeft():
@@ -49,20 +50,31 @@ def goRight():
 
 
 # TODO
+
 def moveForwardABit(tf):
-    GPIO.output(18, GPIO.LOW)
-    GPIO.output(23, GPIO.HIGH)
-    GPIO.output(24, GPIO.LOW)
-    GPIO.output(27, GPIO.HIGH)
-    # time.sleep(tf)
-
-
+    #time_end = time.time() +tf
+    #while time.time() < time_end:
+        #GPIO.output(18, GPIO.LOW)
+        #GPIO.output(23, GPIO.HIGH)
+        #GPIO.output(24, GPIO.LOW)
+        #GPIO.output(27, GPIO.HIGH)
+    global ntime
+    ntime = time.time()
+    print("moveforwardabt", ntime)
 # TODO
 def roomba():
+    # print("roomba")
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
     GPIO.output(27, GPIO.LOW)
+    
+def stop():
+    GPIO.output(18, GPIO.LOW)
+    GPIO.output(23, GPIO.LOW)
+    GPIO.output(24, GPIO.LOW)
+    GPIO.output(27, GPIO.LOW)
+
 
 
 def shutdown():
@@ -71,7 +83,7 @@ def shutdown():
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
-    GPIO.setup(2, GPIO.LOW)  # 2 or 27 ?
+    GPIO.setup(27, GPIO.LOW)  
     cv2.destroyAllWindows()
 
 
@@ -79,18 +91,19 @@ setup()
 
 # define the lower and upper boundaries of the tennis ball color
 # ball in the HSV color space, then initialize the list of tracked points
-lowerColorBound = (29, 24, 6)
-upperColorBound = (72, 255, 255)  # new camera improvements
-# lowerColorBound = (29, 86, 6)
-# upperColorBound = (64, 255, 255)
+# lowerColorBound = (29, 24, 6)
+# upperColorBound = (72, 255, 255)  # new camera improvements
+moveForward = False
+stop()
+ballCount = 0
+lowerColorBound = (29, 86, 6)
+upperColorBound = (64, 255, 255)
 pts = deque(maxlen=args["buffer"])
 
 # grab the reference to the webcam
 camera = cv2.VideoCapture(0)  # Capture Video...
 print("Camera warming up ...")
 
-GPIO.setup(27, GPIO.LOW)
-ballCount = 0
 while True:
     (captured, frame) = camera.read()
 
@@ -101,7 +114,6 @@ while True:
     # resize the frame, and convert it to the HSV color space
     width = 200  # 640 might be reasonable
     frame = imutils.resize(frame, width)
-    cv2.GaussianBlur()
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
     cv2.imshow("HSV", hsv)
@@ -110,8 +122,8 @@ while True:
     # a series of dilations and erosions to remove any small
     # blobs left in the mask
     mask = cv2.inRange(hsv, lowerColorBound, upperColorBound)
-    mask = cv2.erode(mask, None, iterations=10)
-    mask = cv2.dilate(mask, None, iterations=10)
+    mask = cv2.erode(mask, None, iterations=2)
+    mask = cv2.dilate(mask, None, iterations=2)
 
     # find contours in the mask and initialize the current
     # (x, y) center of the ball
@@ -119,8 +131,16 @@ while True:
                             cv2.CHAIN_APPROX_SIMPLE)[-2]
     center = None
 
+    if (moveForward):
+        print("time!!!!!")
+        goForward()
+        if (time.time() > ntime+.5):
+            print(ntime)
+            moveForward = False
+            stop()
+            
     # only proceed if at least one contour was found
-    if len(cnts) > 0:
+    elif len(cnts) > 0:
         # find the largest contour in the mask, then use
         # it to compute the minimum enclosing circle and centroid
         c = max(cnts, key=cv2.contourArea)
@@ -132,6 +152,7 @@ while True:
         leftBound = (width / 2) - (0.15 * width)
         rightBound = (width / 2) + (0.15 * width)
 
+                
         if (center[0] >= leftBound and center[0] <= rightBound):
             goForward()
 
@@ -141,21 +162,24 @@ while True:
         else:
             goRight()
 
+        #print(x,y, radius)
         # draw outer circle if the radius meets a minimum size
         if radius > 10:
             # cv2.circle(image, center, radius, color, thickness)
             cv2.circle(frame, (int(x), int(y)), int(radius),
                        (0, 0, 255), 2)
 
-        if radius >= 50:
+        if radius >= 26.5:
             # ball is close enough to be retrieved!
             # TODO
             # ballCount = ballCount + 1  # look into this!
             # print('Ball Retrieved ' + str(ballCount))
-            moveForwardABit()
+            print("2time!!!!!")
+            moveForwardABit(2)
+            moveForward = True
     else:
         roomba()
-
+    
     # update the points queue
     pts.appendleft(center)
 
