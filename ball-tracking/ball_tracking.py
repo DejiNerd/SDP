@@ -59,7 +59,6 @@ def goRight():
 
 
 # TODO
-
 def moveForwardABit():
     # time_end = time.time() +tf
     # while time.time() < time_end:
