@@ -90,8 +90,8 @@ def pause():
     stop()
     GPIO.output(LED_PAUSE, GPIO.HIGH)
     GPIO.output(LED_ACTIVE, GPIO.LOW)
-    
-    
+
+
 def resume():
     GPIO.output(LED_PAUSE, GPIO.LOW)
     GPIO.output(LED_ACTIVE, GPIO.HIGH)
@@ -108,10 +108,10 @@ def shutdown():
     GPIO.output(LED_ACTIVE, GPIO.LOW)
     cv2.destroyAllWindows()
 
+
 setup()
 camera = cv2.VideoCapture(0)  # Capture Video from web cam...
 print("Camera warming up ...")
-
 
 while True:
     if GPIO.input(PAUSE_SWITCH):
@@ -193,7 +193,7 @@ while True:
         else:
             roomba()
 
-        pts.appendleft(center)   # update the points queue
+        pts.appendleft(center)  # update the points queue
 
         # loop over the set of tracked points
         for i in xrange(1, len(pts)):
