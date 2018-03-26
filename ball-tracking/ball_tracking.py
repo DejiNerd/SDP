@@ -18,7 +18,7 @@ pts = deque(maxlen=args["buffer"])
 LED_PAUSE = 17
 LED_ACTIVE = 22
 PAUSE_SWITCH = 4
-ntime, ballCount, switch = 0, 0, 0
+ntime, ballCount, switch, p, g = 0, 0, 0, 0, 0
 lowerColorBound = (29, 86, 6)
 upperColorBound = (64, 255, 255)
 # lowerColorBound = (29, 24, 6)
@@ -39,10 +39,23 @@ def setup():
     GPIO.setup(23, GPIO.OUT)
     GPIO.setup(24, GPIO.OUT)
     GPIO.setup(27, GPIO.OUT)  # Bryce motors
+    ########################################
+    GPIO.setup(26, GPIO.OUT) #en a
+    GPIO.setup(20, GPIO.OUT) #en b
+    #GPIO.output(20, GPIO.HIGH)
+    #GPIO.output(26, GPIO.HIGH)
+    global p
+    global g
+    p = GPIO.PWM(26,100)
+    g = GPIO.PWM(20,100)
+    p.start(100)
+    g.start(100)
     stop()
 
 
 def goForward():
+    p.ChangeDutyCycle(100)
+    g.ChangeDutyCycle(100)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
@@ -51,6 +64,8 @@ def goForward():
 
 
 def goLeft():
+    p.ChangeDutyCycle(50)
+    g.ChangeDutyCycle(50)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
@@ -58,6 +73,8 @@ def goLeft():
 
 
 def goRight():
+    p.ChangeDutyCycle(50)
+    g.ChangeDutyCycle(50)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
@@ -114,9 +131,13 @@ camera = cv2.VideoCapture(0)  # Capture Video from web cam...
 print("Camera warming up ...")
 
 while True:
-    if GPIO.input(PAUSE_SWITCH):
+    input_state = GPIO.input(PAUSE_SWITCH)
+    prev_input = 0;
+    if ((not prev_input) and input_state):
+        print("switch!", switch)
         switch += 1
-    elif switch % 2 == 1:
+    pre_input = input_state
+    if switch % 2 == 1:
         pause()
     elif switch % 2 == 0:
         resume()
@@ -125,7 +146,7 @@ while True:
             break
 
         # resize the frame, and convert it to the HSV color space
-        width = 400  # 640 might be reasonable
+        width = 250  # 640 might be reasonable
         frame = imutils.resize(frame, width)
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
@@ -140,8 +161,8 @@ while True:
         cv2.imshow("blurredmask", mask_blur)
         # param1=50, param2=35/15
         # TODO - play with the params
-        hough_circles = cv2.HoughCircles(mask_blur, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=25, minRadius=0,
-                                         maxRadius=60)
+        # hough_circles = cv2.HoughCircles(mask_blur, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=25, minRadius=0,
+        #                                 maxRadius=60)
 
         # find contours in the mask
         cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
@@ -158,7 +179,7 @@ while True:
                 moveForward = False
 
         # only proceed if at least one contour was found
-        elif len(cnts) > 0 and hough_circles is not None:
+        elif len(cnts) > 0:
             # find the largest contour in the mask, then use
             # it to compute the minimum enclosing circle and centroid
             c = max(cnts, key=cv2.contourArea)
