@@ -17,21 +17,19 @@ args = vars(ap.parse_args())
 pts = deque(maxlen=args["buffer"])
 LED_PAUSE = 17
 LED_ACTIVE = 22
-PAUSE_SWITCH = 4
+PAUSE_SWITCH = 5
 ntime, ballCount, switch, p, g = 0, 0, 0, 0, 0
 lowerColorBound = (29, 86, 6)
 upperColorBound = (64, 255, 255)
 # lowerColorBound = (29, 24, 6)
 # upperColorBound = (72, 255, 255)  # new camera improvements
 moveForward = False
-
-
 def setup():
     # LED setup
     # 18 = white, 23 = green, 24 = blue
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
-    GPIO.setup(PAUSE_SWITCH, GPIO.IN)
+    GPIO.setup(PAUSE_SWITCH, GPIO.IN, pull_up_down = GPIO.PUD_UP)
     GPIO.setup(LED_PAUSE, GPIO.OUT)
     GPIO.setup(LED_ACTIVE, GPIO.OUT)
     ########################################
@@ -133,10 +131,10 @@ print("Camera warming up ...")
 while True:
     input_state = GPIO.input(PAUSE_SWITCH)
     prev_input = 0;
-    if ((not prev_input) and input_state):
-        print("switch!", switch)
+    if input_state == False:
         switch += 1
-    pre_input = input_state
+        print("switch!", switch)
+        time.sleep(0.2)
     if switch % 2 == 1:
         pause()
     elif switch % 2 == 0:
