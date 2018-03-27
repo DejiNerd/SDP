@@ -2,13 +2,13 @@
 # USAGE: python ball_tracking.py
 # (source ~/.profile; workon cv; python /home/pi/SDP/ball-tracking/ball-tracking.py)&
 
-from collections import deque
-import cv2
-import RPi.GPIO as GPIO
-import numpy as np
-import imutils
 import argparse
 import time
+from collections import deque
+import RPi.GPIO as GPIO
+import cv2
+import imutils
+import numpy as np
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-b", "--buffer", type=int, default=64,
@@ -18,18 +18,21 @@ pts = deque(maxlen=args["buffer"])
 LED_PAUSE = 17
 LED_ACTIVE = 22
 PAUSE_SWITCH = 5
-ntime, ballCount, switch, p, g = 0, 0, 0, 0, 0
+moveForward, ntime, ballCount, switch, p, g = 0, 0, 0, 0, 0, 0
 lowerColorBound = (29, 86, 6)
 upperColorBound = (64, 255, 255)
+
+
 # lowerColorBound = (29, 24, 6)
 # upperColorBound = (72, 255, 255)  # new camera improvements
-moveForward = False
+
+
 def setup():
     # LED setup
     # 18 = white, 23 = green, 24 = blue
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
-    GPIO.setup(PAUSE_SWITCH, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+    GPIO.setup(PAUSE_SWITCH, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(LED_PAUSE, GPIO.OUT)
     GPIO.setup(LED_ACTIVE, GPIO.OUT)
     ########################################
@@ -38,14 +41,14 @@ def setup():
     GPIO.setup(24, GPIO.OUT)
     GPIO.setup(27, GPIO.OUT)  # Bryce motors
     ########################################
-    GPIO.setup(26, GPIO.OUT) #en a
-    GPIO.setup(20, GPIO.OUT) #en b
-    #GPIO.output(20, GPIO.HIGH)
-    #GPIO.output(26, GPIO.HIGH)
+    GPIO.setup(26, GPIO.OUT)  # en a
+    GPIO.setup(20, GPIO.OUT)  # en b
+    # GPIO.output(20, GPIO.HIGH)
+    # GPIO.output(26, GPIO.HIGH)
     global p
     global g
-    p = GPIO.PWM(26,100)
-    g = GPIO.PWM(20,100)
+    p = GPIO.PWM(26, 100)
+    g = GPIO.PWM(20, 100)
     p.start(100)
     g.start(100)
     stop()
@@ -82,7 +85,9 @@ def goRight():
 # TODO
 def moveForwardABit():
     global ntime
+    global moveForward
     ntime = time.time()
+    moveForward = True
     print("moveforwardabt", ntime)
 
 
@@ -130,8 +135,7 @@ print("Camera warming up ...")
 
 while True:
     input_state = GPIO.input(PAUSE_SWITCH)
-    prev_input = 0;
-    if input_state == False:
+    if not input_state:
         switch += 1
         print("switch!", switch)
         time.sleep(0.2)
@@ -171,10 +175,10 @@ while True:
             goForward()
             if time.time() > ntime + .5:
                 stop()
-                print(time.time())
-                ballCount = ballCount + 1
-                print('Ball Retrieved ' + str(ballCount))
                 moveForward = False
+                ballCount = ballCount + 1
+                print(time.time())
+                print('Ball Retrieved ' + str(ballCount))
 
         # only proceed if at least one contour was found
         elif len(cnts) > 0:
@@ -206,9 +210,7 @@ while True:
 
             if radius >= 0.1325 * width:
                 # ball is close enough to be retrieved!
-                print("2time!!!!!")
                 moveForwardABit()
-                moveForward = True
         else:
             roomba()
 
