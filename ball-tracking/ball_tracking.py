@@ -1,7 +1,6 @@
 # Created by BallBot SDP, using the Open Source Computer Vision Library
 # USAGE: python ball_tracking.py
-# (source ~/.profile; workon cv; python /home/pi/SDP/ball-tracking/ball-tracking.py)&
-
+import random
 import argparse
 import time
 from collections import deque
@@ -18,37 +17,30 @@ pts = deque(maxlen=args["buffer"])
 LED_PAUSE = 17
 LED_ACTIVE = 22
 PAUSE_SWITCH = 5
-moveForward, ntime, ballCount, switch, p, g = 0, 0, 0, 0, 0, 0
+moveForward, noBall, ntime, ballCount, switch, p, g = 0, 0, 0, 0, 0, 0, 0
 lowerColorBound = (29, 86, 6)
 upperColorBound = (64, 255, 255)
-
-
-# lowerColorBound = (29, 24, 6)
-# upperColorBound = (72, 255, 255)  # new camera improvements
 
 
 def setup():
     # LED setup
     # 18 = white, 23 = green, 24 = blue
+    global p, g
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     GPIO.setup(PAUSE_SWITCH, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(LED_PAUSE, GPIO.OUT)
     GPIO.setup(LED_ACTIVE, GPIO.OUT)
-    ########################################
+    ########### Bryce motors ###############
     GPIO.setup(18, GPIO.OUT)
     GPIO.setup(23, GPIO.OUT)
     GPIO.setup(24, GPIO.OUT)
-    GPIO.setup(27, GPIO.OUT)  # Bryce motors
-    ########################################
-    GPIO.setup(26, GPIO.OUT)  # en a
+    GPIO.setup(27, GPIO.OUT)  
+    ########   PWM  #######################
     GPIO.setup(20, GPIO.OUT)  # en b
-    # GPIO.output(20, GPIO.HIGH)
-    # GPIO.output(26, GPIO.HIGH)
-    global p
-    global g
-    p = GPIO.PWM(26, 100)
+    GPIO.setup(26, GPIO.OUT)  # en a
     g = GPIO.PWM(20, 100)
+    p = GPIO.PWM(26, 100)
     p.start(100)
     g.start(100)
     stop()
@@ -61,12 +53,11 @@ def goForward():
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
     GPIO.output(27, GPIO.HIGH)
-    # print ("forward")
 
 
 def goLeft():
-    p.ChangeDutyCycle(50)
-    g.ChangeDutyCycle(50)
+    p.ChangeDutyCycle(75)
+    g.ChangeDutyCycle(75)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
@@ -74,8 +65,8 @@ def goLeft():
 
 
 def goRight():
-    p.ChangeDutyCycle(50)
-    g.ChangeDutyCycle(50)
+    p.ChangeDutyCycle(75)
+    g.ChangeDutyCycle(75)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
@@ -84,8 +75,7 @@ def goRight():
 
 # TODO
 def moveForwardABit():
-    global ntime
-    global moveForward
+    global ntime, moveForward
     ntime = time.time()
     moveForward = True
     print("moveforwardabt", ntime)
@@ -93,11 +83,27 @@ def moveForwardABit():
 
 # TODO
 def roomba():
-    GPIO.output(18, GPIO.LOW)
-    GPIO.output(23, GPIO.LOW)
-    GPIO.output(24, GPIO.LOW)
-    GPIO.output(27, GPIO.LOW)
-
+    global noBall
+    stop()
+    count = random.randint(0,7);
+##    while noBall:
+##        if count % 8 == 0 or count % 8 == 2 or count % 8 == 4 or count % 8 == 6:#turn right 90 degrees
+##            GPIO.output(18, GPIO.LOW)
+##            GPIO.output(23, GPIO.LOW)
+##            GPIO.output(24, GPIO.LOW)
+##            GPIO.output(27, GPIO.LOW)
+##        elif count % 8 == 1 or count % 8 == 3:#go straight a bit
+##            GPIO.output(18, GPIO.LOW)
+##            GPIO.output(23, GPIO.LOW)
+##            GPIO.output(24, GPIO.LOW)
+##            GPIO.output(27, GPIO.LOW)
+##        elif count % 8 == 5 or count % 8 == 7:#trun left 90 degrees
+##            GPIO.output(18, GPIO.LOW)
+##            GPIO.output(23, GPIO.LOW)
+##            GPIO.output(24, GPIO.LOW)
+##            GPIO.output(27, GPIO.LOW)
+##        count = count+1
+        
 
 def stop():
     GPIO.output(18, GPIO.LOW)
@@ -123,14 +129,13 @@ def shutdown():
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
     GPIO.output(27, GPIO.LOW)
-    #########################
     GPIO.output(LED_PAUSE, GPIO.LOW)
     GPIO.output(LED_ACTIVE, GPIO.LOW)
     cv2.destroyAllWindows()
 
 
 setup()
-camera = cv2.VideoCapture(0)  # Capture Video from web cam...
+camera = cv2.VideoCapture(1)  # Capture Video from web cam...
 print("Camera warming up ...")
 
 while True:
@@ -142,13 +147,14 @@ while True:
     if switch % 2 == 1:
         pause()
     elif switch % 2 == 0:
-        resume()
         (captured, frame) = camera.read()
         if args.get("video") and not captured:
+            pause()
             break
 
         # resize the frame, and convert it to the HSV color space
-        width = 250  # 640 might be reasonable
+        resume()
+        width = 200
         frame = imutils.resize(frame, width)
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
@@ -159,12 +165,12 @@ while True:
         mask = cv2.inRange(hsv, lowerColorBound, upperColorBound)
         mask = cv2.erode(mask, None, iterations=2)
         mask = cv2.dilate(mask, None, iterations=2)
-        mask_blur = cv2.GaussianBlur(mask, (15, 15), 0)
-        cv2.imshow("blurredmask", mask_blur)
+##        mask_blur = cv2.GaussianBlur(mask, (15, 15), 0)
+        cv2.imshow("blurredmask", mask)
         # param1=50, param2=35/15
         # TODO - play with the params
-        # hough_circles = cv2.HoughCircles(mask_blur, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=25, minRadius=0,
-        #                                 maxRadius=60)
+##        hough_circles = cv2.HoughCircles(mask_blur, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=25, minRadius=0,
+##                                         maxRadius=60)
 
         # find contours in the mask
         cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
@@ -182,6 +188,7 @@ while True:
 
         # only proceed if at least one contour was found
         elif len(cnts) > 0:
+            noBall = 0
             # find the largest contour in the mask, then use
             # it to compute the minimum enclosing circle and centroid
             c = max(cnts, key=cv2.contourArea)
@@ -189,7 +196,7 @@ while True:
             M = cv2.moments(c)
             center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
             cv2.circle(frame, center, 5, (255, 0, 0), -1)
-            print('center: ', center, 'radius', int(radius))  # outputs coordinate to command line
+            print('center: ', center, 'radius', int(radius))
             leftBound = (width / 2) - (0.15 * width)
             rightBound = (width / 2) + (0.15 * width)
 
@@ -204,7 +211,6 @@ while True:
 
             # draw outer circle if the radius meets a minimum size
             if radius > 0.05 * width:
-                # cv2.circle(image, center, radius, color, thickness)
                 cv2.circle(frame, (int(x), int(y)), int(radius),
                            (0, 0, 255), 2)
 
@@ -212,6 +218,7 @@ while True:
                 # ball is close enough to be retrieved!
                 moveForwardABit()
         else:
+            noBall = 1
             roomba()
 
         pts.appendleft(center)  # update the points queue
@@ -222,7 +229,6 @@ while True:
                 continue
             # otherwise, compute the thickness of the line and draw the connecting lines
             thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
-            # cv.Line(img, pt1, pt2, color, thickness=1, lineType=8, shift=0)
             cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
 
         cv2.imshow("Frame", frame)
