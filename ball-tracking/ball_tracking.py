@@ -7,7 +7,9 @@ from collections import deque
 import RPi.GPIO as GPIO
 import cv2
 import imutils
+import serial
 import numpy as np
+import BluetoothTest as bluetooth
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-b", "--buffer", type=int, default=64,
@@ -17,14 +19,13 @@ pts = deque(maxlen=args["buffer"])
 LED_PAUSE = 17
 LED_ACTIVE = 22
 PAUSE_SWITCH = 5
-moveForward, noBall, ntime, ballCount, switch, p, g = 0, 0, 0, 0, 0, 0, 0
+moveForward, ntime, ballCount, switch, p, g, gcount, rooomba = 0, 0, 0, 0, 0, 0, 0, 0
+state = None
 lowerColorBound = (29, 86, 6)
 upperColorBound = (64, 255, 255)
 
 
 def setup():
-    # LED setup
-    # 18 = white, 23 = green, 24 = blue
     global p, g
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
@@ -37,8 +38,8 @@ def setup():
     GPIO.setup(24, GPIO.OUT)
     GPIO.setup(27, GPIO.OUT)  
     ########   PWM  #######################
-    GPIO.setup(20, GPIO.OUT)  # en b
-    GPIO.setup(26, GPIO.OUT)  # en a
+    GPIO.setup(20, GPIO.OUT)  # en b = left motor
+    GPIO.setup(26, GPIO.OUT)  # en a = right motor
     g = GPIO.PWM(20, 100)
     p = GPIO.PWM(26, 100)
     p.start(100)
@@ -56,8 +57,11 @@ def goForward():
 
 
 def goLeft():
-    p.ChangeDutyCycle(75)
-    g.ChangeDutyCycle(75)
+    #if dist > width/4:
+    # g.ChangeDutyCycle(0)
+    #else:
+    #g.ChangeDutyCycle(90)
+    p.ChangeDutyCycle(100)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.LOW)
@@ -65,8 +69,11 @@ def goLeft():
 
 
 def goRight():
-    p.ChangeDutyCycle(75)
-    g.ChangeDutyCycle(75)
+    #if dist > width/4:
+    #p.ChangeDutyCycle(0)
+    #else:
+    #p.ChangeDutyCycle(90)
+    g.ChangeDutyCycle(100)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
     GPIO.output(24, GPIO.LOW)
@@ -83,27 +90,18 @@ def moveForwardABit():
 
 # TODO
 def roomba():
-    global noBall
-    stop()
-    count = random.randint(0,7);
-##    while noBall:
-##        if count % 8 == 0 or count % 8 == 2 or count % 8 == 4 or count % 8 == 6:#turn right 90 degrees
-##            GPIO.output(18, GPIO.LOW)
-##            GPIO.output(23, GPIO.LOW)
-##            GPIO.output(24, GPIO.LOW)
-##            GPIO.output(27, GPIO.LOW)
-##        elif count % 8 == 1 or count % 8 == 3:#go straight a bit
-##            GPIO.output(18, GPIO.LOW)
-##            GPIO.output(23, GPIO.LOW)
-##            GPIO.output(24, GPIO.LOW)
-##            GPIO.output(27, GPIO.LOW)
-##        elif count % 8 == 5 or count % 8 == 7:#trun left 90 degrees
-##            GPIO.output(18, GPIO.LOW)
-##            GPIO.output(23, GPIO.LOW)
-##            GPIO.output(24, GPIO.LOW)
-##            GPIO.output(27, GPIO.LOW)
-##        count = count+1
-        
+    global ntime, rooomba, noball
+    ntime = time.time()
+    rooomba = True
+    noball = True
+
+def turnInPlace():
+    p.ChangeDutyCycle(100)
+    g.ChangeDutyCycle(100)
+    GPIO.output(18, GPIO.LOW)
+    GPIO.output(23, GPIO.HIGH)
+    GPIO.output(24, GPIO.HIGH)
+    GPIO.output(27, GPIO.LOW)
 
 def stop():
     GPIO.output(18, GPIO.LOW)
@@ -124,6 +122,7 @@ def resume():
 
 
 def shutdown():
+    ser.close()
     camera.release()
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
@@ -135,60 +134,100 @@ def shutdown():
 
 
 setup()
-camera = cv2.VideoCapture(1)  # Capture Video from web cam...
+camera = cv2.VideoCapture(0)  # Capture Video from web cam...
+sw ='0'
+ser = serial.Serial('/dev/rfcomm0',9600)
+time.sleep(2)
 print("Camera warming up ...")
 
 while True:
-    input_state = GPIO.input(PAUSE_SWITCH)
-    if not input_state:
-        switch += 1
-        print("switch!", switch)
-        time.sleep(0.2)
-    if switch % 2 == 1:
+##    try:
+##        ch0 = ser.read()
+##        sw = str(ch0.decode("utf-8")).strip(' \t\n\r')
+##    except serial.SerialException:
+##        print 'OUZT~~'
+##        sw = '0'
+    sw = bluetooth.bt(ser,sw)
+    if sw ==  '0':
         pause()
-    elif switch % 2 == 0:
+    elif sw ==  '1':
+        resume()
         (captured, frame) = camera.read()
         if args.get("video") and not captured:
-            pause()
             break
-
+        
         # resize the frame, and convert it to the HSV color space
-        resume()
         width = 200
         frame = imutils.resize(frame, width)
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-
+        
         # construct a mask for the color "yellowish/green", then perform
         # a series of dilations and erosions to remove any small
         # blobs left in the mask
         mask = cv2.inRange(hsv, lowerColorBound, upperColorBound)
         mask = cv2.erode(mask, None, iterations=2)
         mask = cv2.dilate(mask, None, iterations=2)
-##        mask_blur = cv2.GaussianBlur(mask, (15, 15), 0)
-        cv2.imshow("blurredmask", mask)
-        # param1=50, param2=35/15
-        # TODO - play with the params
-##        hough_circles = cv2.HoughCircles(mask_blur, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=25, minRadius=0,
-##                                         maxRadius=60)
-
-        # find contours in the mask
+        ## cv2.imshow("blurredmask", mask)
         cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
                                 cv2.CHAIN_APPROX_SIMPLE)[-2]
         center = None
+        if rooomba:
+            if (gcount % 4) == 0:
+                goRight()
+                print ("360")
+                if time.time() > ntime + 8: 
+                    stop()
+                    rooomba= False
+                    gcount = gcount + 1
+                    # time.sleep(2)
+            else:
+                if state is None:
+                    randint = random.randint(1,3)
+                    if randint % 3 == 0:
+                        state = 'right'
+                    elif randint % 3 == 1:
+                        state = 'left'
+                    elif randint % 3 == 2:
+                        state = 'forward'
+                elif state == 'right':
+                        goRight()
+                        print ("R")
+                        if time.time() > ntime + 3: 
+                            stop()
+                            state = None
+                            rooomba= False
+                            gcount = gcount + 1
+                            # time.sleep(2)
+                elif state == 'left':
+                    goLeft()
+                    print("L")
+                    if time.time() > ntime + 3: 
+                        stop()
+                        state = None
+                        rooomba= False
+                        gcount = gcount + 1
+                        # time.sleep(2)
+                elif state == 'forward':
+                    goForward()
+                    print ("F")
+                    if time.time() > ntime + 2: 
+                        stop()
+                        state = None
+                        rooomba= False
+                        gcount = gcount + 1
+                        # time.sleep(2)
         if moveForward:
-            print("time!!!!!")
             goForward()
-            if time.time() > ntime + .5:
+            if time.time() > ntime + .25:
                 stop()
                 moveForward = False
                 ballCount = ballCount + 1
-                print(time.time())
                 print('Ball Retrieved ' + str(ballCount))
-
         # only proceed if at least one contour was found
         elif len(cnts) > 0:
-            noBall = 0
+            gcount = 0
+            rooomba = False
             # find the largest contour in the mask, then use
             # it to compute the minimum enclosing circle and centroid
             c = max(cnts, key=cv2.contourArea)
@@ -205,31 +244,30 @@ while True:
 
             elif center[0] < leftBound:
                 goLeft()
-
             else:
                 goRight()
-
             # draw outer circle if the radius meets a minimum size
             if radius > 0.05 * width:
                 cv2.circle(frame, (int(x), int(y)), int(radius),
                            (0, 0, 255), 2)
 
-            if radius >= 0.1325 * width:
+            if .15 * width >= radius >= 0.1325 * width:
                 # ball is close enough to be retrieved!
                 moveForwardABit()
-        else:
-            noBall = 1
+        elif not rooomba:
+            goForward()
+            time.sleep(0.5)
             roomba()
-
+        
         pts.appendleft(center)  # update the points queue
 
         # loop over the set of tracked points
-        for i in xrange(1, len(pts)):
-            if pts[i - 1] is None or pts[i] is None:
-                continue
-            # otherwise, compute the thickness of the line and draw the connecting lines
-            thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
-            cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
+##        for i in xrange(1, len(pts)):
+##            if pts[i - 1] is None or pts[i] is None:
+##                continue
+##            # otherwise, compute the thickness of the line and draw the connecting lines
+##            thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
+##            cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
 
         cv2.imshow("Frame", frame)
         key = cv2.waitKey(1) & 0xFF
@@ -237,5 +275,6 @@ while True:
         # if the 'q' key is pressed, stop the loop
         if key == ord("q"):
             break
+
 
 shutdown()
