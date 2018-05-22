@@ -1,14 +1,15 @@
 # Created by BallBot SDP, using the Open Source Computer Vision Library
 # USAGE: python ball_tracking.py
-import random
 import argparse
+import random
 import time
 from collections import deque
+
 import RPi.GPIO as GPIO
 import cv2
 import imutils
 import serial
-import numpy as np
+
 import BluetoothTest as bluetooth
 
 ap = argparse.ArgumentParser()
@@ -36,7 +37,7 @@ def setup():
     GPIO.setup(18, GPIO.OUT)
     GPIO.setup(23, GPIO.OUT)
     GPIO.setup(24, GPIO.OUT)
-    GPIO.setup(27, GPIO.OUT)  
+    GPIO.setup(27, GPIO.OUT)
     ########   PWM  #######################
     GPIO.setup(20, GPIO.OUT)  # en b = left motor
     GPIO.setup(26, GPIO.OUT)  # en a = right motor
@@ -57,10 +58,6 @@ def goForward():
 
 
 def goLeft():
-    #if dist > width/4:
-    # g.ChangeDutyCycle(0)
-    #else:
-    #g.ChangeDutyCycle(90)
     p.ChangeDutyCycle(100)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.HIGH)
@@ -69,10 +66,6 @@ def goLeft():
 
 
 def goRight():
-    #if dist > width/4:
-    #p.ChangeDutyCycle(0)
-    #else:
-    #p.ChangeDutyCycle(90)
     g.ChangeDutyCycle(100)
     GPIO.output(18, GPIO.LOW)
     GPIO.output(23, GPIO.LOW)
@@ -80,7 +73,6 @@ def goRight():
     GPIO.output(27, GPIO.HIGH)
 
 
-# TODO
 def moveForwardABit():
     global ntime, moveForward
     ntime = time.time()
@@ -88,12 +80,12 @@ def moveForwardABit():
     print("moveforwardabt", ntime)
 
 
-# TODO
 def roomba():
     global ntime, rooomba, noball
     ntime = time.time()
     rooomba = True
     noball = True
+
 
 def turnInPlace():
     p.ChangeDutyCycle(100)
@@ -102,6 +94,7 @@ def turnInPlace():
     GPIO.output(23, GPIO.HIGH)
     GPIO.output(24, GPIO.HIGH)
     GPIO.output(27, GPIO.LOW)
+
 
 def stop():
     GPIO.output(18, GPIO.LOW)
@@ -135,33 +128,27 @@ def shutdown():
 
 setup()
 camera = cv2.VideoCapture(0)  # Capture Video from web cam...
-sw ='0'
-ser = serial.Serial('/dev/rfcomm0',9600)
+sw = '0'
+ser = serial.Serial('/dev/rfcomm0', 9600)
 time.sleep(2)
 print("Camera warming up ...")
 
 while True:
-##    try:
-##        ch0 = ser.read()
-##        sw = str(ch0.decode("utf-8")).strip(' \t\n\r')
-##    except serial.SerialException:
-##        print 'OUZT~~'
-##        sw = '0'
-    sw = bluetooth.bt(ser,sw)
-    if sw ==  '0':
+    sw = bluetooth.bt(ser, sw)
+    if sw == '0':
         pause()
-    elif sw ==  '1':
+    elif sw == '1':
         resume()
         (captured, frame) = camera.read()
         if args.get("video") and not captured:
             break
-        
+
         # resize the frame, and convert it to the HSV color space
         width = 200
         frame = imutils.resize(frame, width)
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-        
+
         # construct a mask for the color "yellowish/green", then perform
         # a series of dilations and erosions to remove any small
         # blobs left in the mask
@@ -176,14 +163,13 @@ while True:
             if (gcount % 4) == 0:
                 goRight()
                 print ("360")
-                if time.time() > ntime + 8: 
+                if time.time() > ntime + 8:
                     stop()
-                    rooomba= False
+                    rooomba = False
                     gcount = gcount + 1
-                    # time.sleep(2)
             else:
                 if state is None:
-                    randint = random.randint(1,3)
+                    randint = random.randint(1, 3)
                     if randint % 3 == 0:
                         state = 'right'
                     elif randint % 3 == 1:
@@ -191,32 +177,29 @@ while True:
                     elif randint % 3 == 2:
                         state = 'forward'
                 elif state == 'right':
-                        goRight()
-                        print ("R")
-                        if time.time() > ntime + 3: 
-                            stop()
-                            state = None
-                            rooomba= False
-                            gcount = gcount + 1
-                            # time.sleep(2)
+                    goRight()
+                    print ("R")
+                    if time.time() > ntime + 3:
+                        stop()
+                        state = None
+                        rooomba = False
+                        gcount = gcount + 1
                 elif state == 'left':
                     goLeft()
                     print("L")
-                    if time.time() > ntime + 3: 
+                    if time.time() > ntime + 3:
                         stop()
                         state = None
-                        rooomba= False
+                        rooomba = False
                         gcount = gcount + 1
-                        # time.sleep(2)
                 elif state == 'forward':
                     goForward()
                     print ("F")
-                    if time.time() > ntime + 2: 
+                    if time.time() > ntime + 2:
                         stop()
                         state = None
-                        rooomba= False
+                        rooomba = False
                         gcount = gcount + 1
-                        # time.sleep(2)
         if moveForward:
             goForward()
             if time.time() > ntime + .25:
@@ -258,23 +241,13 @@ while True:
             goForward()
             time.sleep(0.5)
             roomba()
-        
+
         pts.appendleft(center)  # update the points queue
-
-        # loop over the set of tracked points
-##        for i in xrange(1, len(pts)):
-##            if pts[i - 1] is None or pts[i] is None:
-##                continue
-##            # otherwise, compute the thickness of the line and draw the connecting lines
-##            thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
-##            cv2.line(frame, pts[i - 1], pts[i], (255, 0, 0), thickness)
-
         cv2.imshow("Frame", frame)
         key = cv2.waitKey(1) & 0xFF
 
         # if the 'q' key is pressed, stop the loop
         if key == ord("q"):
             break
-
 
 shutdown()
